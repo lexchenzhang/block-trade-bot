@@ -1,0 +1,16 @@
+{
+  "name": "com.block-trade.app",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "start": "node main.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "eth-crypto": "^2.1.0",
+    "web3": "^1.6.0",
+    "web3-eth": "^1.6.0"
+  }
+}
