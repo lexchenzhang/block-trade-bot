@@ -195,6 +195,16 @@ contract = web3.eth.contract(address=pancakeSwapFactoryAddress, abi=listeningABI
 print(currentTimeStamp + " [Info] Scanning for new tokens...")
 print("") #line break
 
+def isWhiteList(token):
+    with open('whitelist.json', 'r') as configdata:
+        data=configdata.read()
+    whiteList = json.loads(data)
+    if 'list' in whiteList:
+        for sub_token in whiteList['list']:
+            if token == sub_token:
+                return True
+    return False
+
 def getReserves(pairAddressforReserves): #fundamental code for liquidity detection
   #  print("4")
     router = web3.eth.contract(address=pairAddressforReserves, abi=pairABI)
@@ -247,21 +257,21 @@ def foundToken(event):
                 contractCodeRequest = requests.get(url = contractCodeGetRequestURL)
                 tokenContractCode = contractCodeRequest.json()
 
-                if(str(tokenContractCode['result'][0]['ABI']) == "Contract source code not verified") and checkSourceCode == "True": #check if source code is verified
+                if ( False == isWhiteList(tokenAddress)): # check white list
+                    print(style.RED + currentTimeStamp + " [FAIL] Contract addree isn't in white list.")
+                
+                elif(str(tokenContractCode['result'][0]['ABI']) == "Contract source code not verified") and checkSourceCode == "True": #check if source code is verified
                     print(style.RED + currentTimeStamp + " [FAIL] Contract source code isn't verified.")
 
                 elif (str(pancakeSwapRouterAddress) not in str(tokenContractCode['result'][0]['SourceCode'])) and checkValidPancakeV2 == "True": #check if pancakeswap v2 router is used
                     print(style.RED + currentTimeStamp + " [FAIL] Contract doesn't use valid PancakeSwap v2 router.")
 
-
                 elif "TEST" in tokenName.upper() and checkForTest == "True":
                     print(style.RED + currentTimeStamp + " [FAIL] Token is a test.")
                     
-
                 elif tokenLiquidityAmount < minLiquidityAmount:
                     print(style.RED + "[FAIL] Liquidity amount too low. ")
                 
-
                 else:
                     passedCodeExceptionCheck = True
                     codeExceptionFile = open("code_exceptions.txt")
