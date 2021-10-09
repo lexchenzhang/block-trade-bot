@@ -1,9 +1,13 @@
 const Web3 = require('web3');
 
 // Variables definition
+// const privKey = 'ab4b77f621c0d398a830aef9374b5ac60374beec13f16b62ce160ae7cd1f5d04'; // Genesis private key
 const addressFrom = '0x96DFA00D52d9AF1d44cAC1621aF1eE963dF29637';
 const addressTo = '0x069a49Bc77973b1703C6BDf9702FB4d078B08E68';
 const web3 = new Web3('https://ropsten.infura.io/v3/6d297f685eeb4e7aa9781735af52ebe0');
+
+const privKey =
+    '7150fc7facef0461888025d0d1b9fce1a135356d7af64c4b517467b2d4285960';
 
 const ERC20TransferABI = [{
         "constant": true,
@@ -406,30 +410,55 @@ const ERC20TransferABI = [{
 
 const DAI_ADDRESS = "0x2cF91C91c0990540a66B06dd20e5433379B2F863"
 
+// Create transaction
+const transfer = async() => {
+    // const devToken = new web3.eth.Contract(ERC20TransferABI, DAI_ADDRESS);
+    // // const ret = await devToken.methods.transfer(addressTo, 12).send({ from: addressFrom });
+    // const ret = await devToken.methods.transferFrom(addressFrom, addressTo, 12).send({ from: addressFrom });
+    // // const ret = await devToken.methods.transferAnyERC20Token(addressTo, 12).call({ from: addressFrom });
+    // console.log(
+    //     `Transaction ret is: ${ret}`
+    // );
 
-// Balance call
-const balances = async() => {
-    const balanceFrom = web3.utils.fromWei(
-        await web3.eth.getBalance(addressFrom),
-        'ether'
-    );
-    const balanceTo = await web3.utils.fromWei(
-        await web3.eth.getBalance(addressTo),
-        'ether'
+    var contract = new web3.eth.Contract(ERC20TransferABI, DAI_ADDRESS, { from: addressFrom });
+
+    // var rawTransaction = {
+    //     "from": addressFrom,
+    //     "gasPrice": web3.utils.toHex(2 * 1e9),
+    //     "gasLimit": web3.utils.toHex(210000),
+    //     "to": DAI_ADDRESS,
+    //     "value": "0x0",
+    //     "data": ERC20TransferABI,
+    //     "nonce": web3.utils.toHex(count)
+    // }
+    // var transaction = new Tx(rawTransaction)
+    // transaction.sign(privateKey)
+
+    // web3.eth.sendSignedTransaction('0x' + transaction.serialize().toString('hex'))
+
+    // check the balance
+    // contract.methods.balanceOf(myAddress).call().then(function(balance) { console.log(balance) })
+
+    // var amount = web3.utils.toHex(12);
+
+    const createTransaction = await web3.eth.accounts.signTransaction({
+            from: addressFrom,
+            to: addressTo,
+            value: 0x0,
+            gas: '22000',
+            data: contract.methods.transfer(addressTo, '20').encodeABI()
+        },
+        privKey
     );
 
-    console.log(`The balance of ${addressFrom} is: ${balanceFrom} ETH.`);
-    console.log(`The balance of ${addressTo} is: ${balanceTo} ETH.`);
+    // Deploy transaction
+    const createReceipt = await web3.eth.sendSignedTransaction(
+        createTransaction.rawTransaction
+    );
+
+    console.log(
+        `Transaction successful with hash: ${createReceipt.transactionHash}`
+    );
 };
 
-// Total
-const totalAmout = async() => {
-    const devToken = new web3.eth.Contract(ERC20TransferABI, DAI_ADDRESS);
-    const total = await devToken.methods.totalSupply().call();
-    const ava = await devToken.methods.balanceOf(addressFrom).call();
-
-    console.log(`The total of tokens is: ${total} .`);
-    console.log(`The ava of ${addressFrom} is: ${ava} .`);
-}
-
-totalAmout();
+transfer();

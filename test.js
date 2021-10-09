@@ -2,34 +2,33 @@ const Web3 = require('web3');
 
 // Variables definition
 const privKey =
- '99B3C12287537E38C90A9219D4CB074A89A16E9CDB20BF85728EBD97C343E342'; // Genesis private key
-const addressFrom = '0x6Be02d1d3665660d22FF9624b7BE0551ee1Ac91b';
-const addressTo = '0xB90168C8CBcd351D069ffFdA7B71cd846924d551';
-const web3 = new Web3('http://localhost:9933');
+    'ab4b77f621c0d398a830aef9374b5ac60374beec13f16b62ce160ae7cd1f5d04'; // Genesis private key
+const addressFrom = '0xaa26F181C3E08339f285a750fD5F9093eC1297DD';
+const addressTo = '0xa8dC83000D5630DA5893a4593b1890a7fAfb0D72';
+const web3 = new Web3('http://localhost:8545');
 
 // Create transaction
-const deploy = async () => {
-   console.log(
-      `Attempting to make transaction from ${addressFrom} to ${addressTo}`
-   );
+const deploy = async() => {
+    console.log(
+        `Attempting to make transaction from ${addressFrom} to ${addressTo}`
+    );
 
-   const createTransaction = await web3.eth.accounts.signTransaction(
-      {
-         from: addressFrom,
-         to: addressTo,
-         value: web3.utils.toWei('100', 'ether'),
-         gas: '21000',
-      },
-      privKey
-   );
+    const createTransaction = await web3.eth.accounts.signTransaction({
+            from: addressFrom,
+            to: addressTo,
+            value: web3.utils.toWei('1', 'ether'),
+            gas: '21000',
+        },
+        privKey
+    );
 
-   // Deploy transaction
-   const createReceipt = await web3.eth.sendSignedTransaction(
-      createTransaction.rawTransaction
-   );
-   console.log(
-      `Transaction successful with hash: ${createReceipt.transactionHash}`
-   );
+    // Deploy transaction
+    const createReceipt = await web3.eth.sendSignedTransaction(
+        createTransaction.rawTransaction
+    );
+    console.log(
+        `Transaction successful with hash: ${createReceipt.transactionHash}`
+    );
 };
 
 deploy();
