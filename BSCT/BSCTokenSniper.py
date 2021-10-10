@@ -93,6 +93,7 @@ checkMintFunction = configData['checkMintFunction']
 checkHoneypot = configData['checkHoneypot']
 checkPancakeV1Router = configData['checkPancakeV1Router']
 checkForTest = configData['checkForTest']
+checkForWhiteList = configData['checkForWhiteList']
 minLiquidityAmount = float(configData['minLiquidityAmount'])
 
 web3 = Web3(Web3.WebsocketProvider(bscNode))
@@ -252,27 +253,53 @@ def foundToken(event):
 #--------------------------------------------MINI AUDIT FEATURE-------------------------------------------------------
 
             if(enableMiniAudit == True): #enable mini audit feature: quickly scans token for potential features that make it a scam / honeypot / rugpull etc
-                print(style.YELLOW + currentTimeStamp + " [Token] Starting Mini Audit...")
+                print(style.YELLOW + currentTimeStamp + " [Token] Starting Mini Audit...\n")
                 contractCodeGetRequestURL = "https://api.bscscan.com/api?module=contract&action=getsourcecode&address=" + tokenAddress + "&apikey=" + bscScanAPIKey
                 contractCodeRequest = requests.get(url = contractCodeGetRequestURL)
                 tokenContractCode = contractCodeRequest.json()
 
-                if ( False == isWhiteList(tokenAddress)): # check white list
+                # print("\n")
+
+                # outcome = "";
+
+                if ( False == isWhiteList(tokenAddress) and checkForWhiteList == "True"): # check white list
                     print(style.RED + currentTimeStamp + " [FAIL] Contract addree isn't in white list.")
-                
-                elif(str(tokenContractCode['result'][0]['ABI']) == "Contract source code not verified") and checkSourceCode == "True": #check if source code is verified
-                    print(style.RED + currentTimeStamp + " [FAIL] Contract source code isn't verified.")
-
-                elif (str(pancakeSwapRouterAddress) not in str(tokenContractCode['result'][0]['SourceCode'])) and checkValidPancakeV2 == "True": #check if pancakeswap v2 router is used
-                    print(style.RED + currentTimeStamp + " [FAIL] Contract doesn't use valid PancakeSwap v2 router.")
-
-                elif "TEST" in tokenName.upper() and checkForTest == "True":
-                    print(style.RED + currentTimeStamp + " [FAIL] Token is a test.")
-                    
-                elif tokenLiquidityAmount < minLiquidityAmount:
-                    print(style.RED + "[FAIL] Liquidity amount too low. ")
-                
+                    boolWhiteList = False
                 else:
+                    print(style.GREEN + "[SUCCESS] Contract address in white list.")
+                    boolWhiteList = True
+                
+                if(str(tokenContractCode['result'][0]['ABI']) == "Contract source code not verified") and checkSourceCode == "True": #check if source code is verified
+                    print(style.RED + currentTimeStamp + " [FAIL] Contract source code isn't verified.")
+                    boolSCV = False
+                else:
+                    print(style.GREEN + "[SUCCESS] Contract source code verified.")
+                    boolSCV = True
+
+                if (str(pancakeSwapRouterAddress) not in str(tokenContractCode['result'][0]['SourceCode'])) and checkValidPancakeV2 == "True": #check if pancakeswap v2 router is used
+                    print(style.RED + currentTimeStamp + " [FAIL] Contract doesn't use valid PancakeSwap v2 router.")
+                    boolPSV2 = False
+                else:
+                    print(style.GREEN + "[SUCCESS] Contract use valid PancakeSwap v2 router.")
+                    boolPSV2 = True
+
+                if "TEST" in tokenName.upper() and checkForTest == "True":
+                    print(style.RED + currentTimeStamp + " [FAIL] Token is a test.")
+                    boolTest = False
+                else:
+                    print(style.GREEN + "[SUCCESS] Token is not test.")
+                    boolTest = True
+                    
+                if tokenLiquidityAmount < minLiquidityAmount:
+                    print(style.RED + "[FAIL] Liquidity amount too low.")
+                    boolLid = False
+                else:
+                    print(style.GREEN + "[SUCCESS] Liquidity is " + tokenLiquidityAmount)
+                    boolLid = True
+
+                print("\n")
+                
+                if (boolWhiteList and boolSCV and boolPSV2 and boolLid and boolTest):
                     passedCodeExceptionCheck = True
                     codeExceptionFile = open("code_exceptions.txt")
                     lines = codeExceptionFile.readlines()
