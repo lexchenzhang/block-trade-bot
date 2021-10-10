@@ -93,6 +93,7 @@ checkMintFunction = configData['checkMintFunction']
 checkHoneypot = configData['checkHoneypot']
 checkPancakeV1Router = configData['checkPancakeV1Router']
 checkForTest = configData['checkForTest']
+checkForWhiteList = configData['checkForWhiteList']
 minLiquidityAmount = float(configData['minLiquidityAmount'])
 
 web3 = Web3(Web3.WebsocketProvider(bscNode))
@@ -257,7 +258,7 @@ def foundToken(event):
                 contractCodeRequest = requests.get(url = contractCodeGetRequestURL)
                 tokenContractCode = contractCodeRequest.json()
 
-                if ( False == isWhiteList(tokenAddress)): # check white list
+                if ( False == isWhiteList(tokenAddress) and checkForWhiteList == "True"): # check white list
                     print(style.RED + currentTimeStamp + " [FAIL] Contract addree isn't in white list.")
                 
                 elif(str(tokenContractCode['result'][0]['ABI']) == "Contract source code not verified") and checkSourceCode == "True": #check if source code is verified
