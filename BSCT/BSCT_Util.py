@@ -9,11 +9,3 @@ def isWhiteList(token):
             if token == sub_token:
                 return True
     return False
-
-if (0.5 < float("0.3")):
-    print("[FAIL] Liquidity amount too low.")
-    boolLid = False
-else:
-    print("[SUCCESS] Liquidity is " + "0.2")
-    boolLid = True
-print(boolLid)

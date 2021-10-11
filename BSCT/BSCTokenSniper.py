@@ -9,7 +9,14 @@ import requests
 import time
 import os
 import sys
+import logging
+import BSCT_Util
+import BSCT_Config as config
 #import ctypes
+
+logging.basicConfig(filename='transaction-ret.log',
+        level=logging.INFO,)
+
 
 os.system("mode con: lines=32766")
 os.system("") #allows different colour text to be used
@@ -60,43 +67,8 @@ numTokensBought = 0
 walletBalance = 0
 
 
-    
-#load json data
 
-configFilePath = os.path.abspath('') + '/config.json'
-
-with open(configFilePath, 'r') as configdata:
-    data=configdata.read()
-
-# parse file
-configData = json.loads(data)
-
-pancakeSwapRouterAddress = configData['pancakeSwapRouterAddress'] #load config data from JSON file into program
-pancakeSwapFactoryAddress = '0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73' #read from JSON later
-walletAddress = configData['walletAddress']
-walletPrivateKey = configData['walletPrivateKey'] #private key is kept safe and only used in the program
-
-bscNode = configData['bscNode']
-
-snipeBNBAmount = float(configData['amountToSpendPerSnipe'])
-transactionRevertTime = int(configData['transactionRevertTimeSeconds']) #number of seconds after transaction processes to cancel it if it hasn't completed
-gasAmount = int(configData['gasAmount'])
-gasPrice = int(configData['gasPrice'])
-bscScanAPIKey = configData['bscScanAPIKey']
-observeOnly = configData['observeOnly']
-liquidityPairAddress = configData['liquidityPairAddress']
-
-
-checkSourceCode = configData['checkSourceCode']
-checkValidPancakeV2 = configData['checkValidPancakeV2']
-checkMintFunction = configData['checkMintFunction']
-checkHoneypot = configData['checkHoneypot']
-checkPancakeV1Router = configData['checkPancakeV1Router']
-checkForTest = configData['checkForTest']
-checkForWhiteList = configData['checkForWhiteList']
-minLiquidityAmount = float(configData['minLiquidityAmount'])
-
-web3 = Web3(Web3.WebsocketProvider(bscNode))
+web3 = Web3(Web3.WebsocketProvider(config.bscNode))
 
 if web3.isConnected():
     print(currentTimeStamp + " [Info] Web3 successfully connected")
@@ -104,19 +76,19 @@ if web3.isConnected():
 
 enableMiniAudit = False
 
-if checkSourceCode == "True" and (checkValidPancakeV2 == "True" or checkMintFunction == "True" or checkHoneypot == "True" or checkPancakeV1Router == "True"):
+if config.checkSourceCode == "True" and (config.checkValidPancakeV2 == "True" or config.checkMintFunction == "True" or config.checkHoneypot == "True" or config.checkPancakeV1Router == "True"):
     enableMiniAudit = True
 
 def updateTitle():
-    walletBalance = web3.fromWei(web3.eth.get_balance(walletAddress),'ether') #There are references to ether in the code but it's set to BNB, its just how Web3 was originally designed
+    walletBalance = web3.fromWei(web3.eth.get_balance(config.walletAddress),'ether') #There are references to ether in the code but it's set to BNB, its just how Web3 was originally designed
     walletBalance = round(walletBalance, -(int("{:e}".format(walletBalance).split('e')[1]) - 4)) #the number '4' is the wallet balance significant figures + 1, so shows 5 sig figs
     sys.stdout.write("BSCTokenSniper | Tokens Detected: " + str(numTokensDetected) + " | Tokens Bought: " + str(numTokensBought) + " | Wallet Balance: " + str(walletBalance) + " BNB")
     sys.stdout.flush()
 updateTitle()
 
 
-print(currentTimeStamp + " [Info] Using Wallet Address: " + walletAddress)
-print(currentTimeStamp + " [Info] Using Snipe Amount: " + str(snipeBNBAmount), "BNB")
+print(currentTimeStamp + " [Info] Using Wallet Address: " + config.walletAddress)
+print(currentTimeStamp + " [Info] Using Snipe Amount: " + str(config.snipeBNBAmount), "BNB")
 
 pancakeABI = '[{"inputs":[{"internalType":"address","name":"_factory","type":"address"},{"internalType":"address","name":"_WETH","type":"address"}],"stateMutability":"nonpayable","type":"constructor"},{"inputs":[],"name":"WETH","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"address","name":"tokenA","type":"address"},{"internalType":"address","name":"tokenB","type":"address"},{"internalType":"uint256","name":"amountADesired","type":"uint256"},{"internalType":"uint256","name":"amountBDesired","type":"uint256"},{"internalType":"uint256","name":"amountAMin","type":"uint256"},{"internalType":"uint256","name":"amountBMin","type":"uint256"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"deadline","type":"uint256"}],"name":"addLiquidity","outputs":[{"internalType":"uint256","name":"amountA","type":"uint256"},{"internalType":"uint256","name":"amountB","type":"uint256"},{"internalType":"uint256","name":"liquidity","type":"uint256"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"token","type":"address"},{"internalType":"uint256","name":"amountTokenDesired","type":"uint256"},{"internalType":"uint256","name":"amountTokenMin","type":"uint256"},{"internalType":"uint256","name":"amountETHMin","type":"uint256"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"deadline","type":"uint256"}],"name":"addLiquidityETH","outputs":[{"internalType":"uint256","name":"amountToken","type":"uint256"},{"internalType":"uint256","name":"amountETH","type":"uint256"},{"internalType":"uint256","name":"liquidity","type":"uint256"}],"stateMutability":"payable","type":"function"},{"inputs":[],"name":"factory","outputs":[{"internalType":"address","name":"","type":"address"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"amountOut","type":"uint256"},{"internalType":"uint256","name":"reserveIn","type":"uint256"},{"internalType":"uint256","name":"reserveOut","type":"uint256"}],"name":"getAmountIn","outputs":[{"internalType":"uint256","name":"amountIn","type":"uint256"}],"stateMutability":"pure","type":"function"},{"inputs":[{"internalType":"uint256","name":"amountIn","type":"uint256"},{"internalType":"uint256","name":"reserveIn","type":"uint256"},{"internalType":"uint256","name":"reserveOut","type":"uint256"}],"name":"getAmountOut","outputs":[{"internalType":"uint256","name":"amountOut","type":"uint256"}],"stateMutability":"pure","type":"function"},{"inputs":[{"internalType":"uint256","name":"amountOut","type":"uint256"},{"internalType":"address[]","name":"path","type":"address[]"}],"name":"getAmountsIn","outputs":[{"internalType":"uint256[]","name":"amounts","type":"uint256[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"amountIn","type":"uint256"},{"internalType":"address[]","name":"path","type":"address[]"}],"name":"getAmountsOut","outputs":[{"internalType":"uint256[]","name":"amounts","type":"uint256[]"}],"stateMutability":"view","type":"function"},{"inputs":[{"internalType":"uint256","name":"amountA","type":"uint256"},{"internalType":"uint256","name":"reserveA","type":"uint256"},{"internalType":"uint256","name":"reserveB","type":"uint256"}],"name":"quote","outputs":[{"internalType":"uint256","name":"amountB","type":"uint256"}],"stateMutability":"pure","type":"function"},{"inputs":[{"internalType":"address","name":"tokenA","type":"address"},{"internalType":"address","name":"tokenB","type":"address"},{"internalType":"uint256","name":"liquidity","type":"uint256"},{"internalType":"uint256","name":"amountAMin","type":"uint256"},{"internalType":"uint256","name":"amountBMin","type":"uint256"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"deadline","type":"uint256"}],"name":"removeLiquidity","outputs":[{"internalType":"uint256","name":"amountA","type":"uint256"},{"internalType":"uint256","name":"amountB","type":"uint256"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"token","type":"address"},{"internalType":"uint256","name":"liquidity","type":"uint256"},{"internalType":"uint256","name":"amountTokenMin","type":"uint256"},{"internalType":"uint256","name":"amountETHMin","type":"uint256"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"deadline","type":"uint256"}],"name":"removeLiquidityETH","outputs":[{"internalType":"uint256","name":"amountToken","type":"uint256"},{"internalType":"uint256","name":"amountETH","type":"uint256"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"token","type":"address"},{"internalType":"uint256","name":"liquidity","type":"uint256"},{"internalType":"uint256","name":"amountTokenMin","type":"uint256"},{"internalType":"uint256","name":"amountETHMin","type":"uint256"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"deadline","type":"uint256"}],"name":"removeLiquidityETHSupportingFeeOnTransferTokens","outputs":[{"internalType":"uint256","name":"amountETH","type":"uint256"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"token","type":"address"},{"internalType":"uint256","name":"liquidity","type":"uint256"},{"internalType":"uint256","name":"amountTokenMin","type":"uint256"},{"internalType":"uint256","name":"amountETHMin","type":"uint256"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"deadline","type":"uint256"},{"internalType":"bool","name":"approveMax","type":"bool"},{"internalType":"uint8","name":"v","type":"uint8"},{"internalType":"bytes32","name":"r","type":"bytes32"},{"internalType":"bytes32","name":"s","type":"bytes32"}],"name":"removeLiquidityETHWithPermit","outputs":[{"internalType":"uint256","name":"amountToken","type":"uint256"},{"internalType":"uint256","name":"amountETH","type":"uint256"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"token","type":"address"},{"internalType":"uint256","name":"liquidity","type":"uint256"},{"internalType":"uint256","name":"amountTokenMin","type":"uint256"},{"internalType":"uint256","name":"amountETHMin","type":"uint256"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"deadline","type":"uint256"},{"internalType":"bool","name":"approveMax","type":"bool"},{"internalType":"uint8","name":"v","type":"uint8"},{"internalType":"bytes32","name":"r","type":"bytes32"},{"internalType":"bytes32","name":"s","type":"bytes32"}],"name":"removeLiquidityETHWithPermitSupportingFeeOnTransferTokens","outputs":[{"internalType":"uint256","name":"amountETH","type":"uint256"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"address","name":"tokenA","type":"address"},{"internalType":"address","name":"tokenB","type":"address"},{"internalType":"uint256","name":"liquidity","type":"uint256"},{"internalType":"uint256","name":"amountAMin","type":"uint256"},{"internalType":"uint256","name":"amountBMin","type":"uint256"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"deadline","type":"uint256"},{"internalType":"bool","name":"approveMax","type":"bool"},{"internalType":"uint8","name":"v","type":"uint8"},{"internalType":"bytes32","name":"r","type":"bytes32"},{"internalType":"bytes32","name":"s","type":"bytes32"}],"name":"removeLiquidityWithPermit","outputs":[{"internalType":"uint256","name":"amountA","type":"uint256"},{"internalType":"uint256","name":"amountB","type":"uint256"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"amountOut","type":"uint256"},{"internalType":"address[]","name":"path","type":"address[]"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"deadline","type":"uint256"}],"name":"swapETHForExactTokens","outputs":[{"internalType":"uint256[]","name":"amounts","type":"uint256[]"}],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"uint256","name":"amountOutMin","type":"uint256"},{"internalType":"address[]","name":"path","type":"address[]"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"deadline","type":"uint256"}],"name":"swapExactETHForTokens","outputs":[{"internalType":"uint256[]","name":"amounts","type":"uint256[]"}],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"uint256","name":"amountOutMin","type":"uint256"},{"internalType":"address[]","name":"path","type":"address[]"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"deadline","type":"uint256"}],"name":"swapExactETHForTokensSupportingFeeOnTransferTokens","outputs":[],"stateMutability":"payable","type":"function"},{"inputs":[{"internalType":"uint256","name":"amountIn","type":"uint256"},{"internalType":"uint256","name":"amountOutMin","type":"uint256"},{"internalType":"address[]","name":"path","type":"address[]"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"deadline","type":"uint256"}],"name":"swapExactTokensForETH","outputs":[{"internalType":"uint256[]","name":"amounts","type":"uint256[]"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"amountIn","type":"uint256"},{"internalType":"uint256","name":"amountOutMin","type":"uint256"},{"internalType":"address[]","name":"path","type":"address[]"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"deadline","type":"uint256"}],"name":"swapExactTokensForETHSupportingFeeOnTransferTokens","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"amountIn","type":"uint256"},{"internalType":"uint256","name":"amountOutMin","type":"uint256"},{"internalType":"address[]","name":"path","type":"address[]"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"deadline","type":"uint256"}],"name":"swapExactTokensForTokens","outputs":[{"internalType":"uint256[]","name":"amounts","type":"uint256[]"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"amountIn","type":"uint256"},{"internalType":"uint256","name":"amountOutMin","type":"uint256"},{"internalType":"address[]","name":"path","type":"address[]"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"deadline","type":"uint256"}],"name":"swapExactTokensForTokensSupportingFeeOnTransferTokens","outputs":[],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"amountOut","type":"uint256"},{"internalType":"uint256","name":"amountInMax","type":"uint256"},{"internalType":"address[]","name":"path","type":"address[]"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"deadline","type":"uint256"}],"name":"swapTokensForExactETH","outputs":[{"internalType":"uint256[]","name":"amounts","type":"uint256[]"}],"stateMutability":"nonpayable","type":"function"},{"inputs":[{"internalType":"uint256","name":"amountOut","type":"uint256"},{"internalType":"uint256","name":"amountInMax","type":"uint256"},{"internalType":"address[]","name":"path","type":"address[]"},{"internalType":"address","name":"to","type":"address"},{"internalType":"uint256","name":"deadline","type":"uint256"}],"name":"swapTokensForExactTokens","outputs":[{"internalType":"uint256[]","name":"amounts","type":"uint256[]"}],"stateMutability":"nonpayable","type":"function"},{"stateMutability":"payable","type":"receive"}]'
 listeningABI = json.loads('[{"inputs":[{"internalType":"address","name":"_feeToSetter","type":"address"}],"payable":false,"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"token0","type":"address"},{"indexed":true,"internalType":"address","name":"token1","type":"address"},{"indexed":false,"internalType":"address","name":"pair","type":"address"},{"indexed":false,"internalType":"uint256","name":"","type":"uint256"}],"name":"PairCreated","type":"event"},{"constant":true,"inputs":[{"internalType":"uint256","name":"","type":"uint256"}],"name":"allPairs","outputs":[{"internalType":"address","name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"allPairsLength","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"internalType":"address","name":"tokenA","type":"address"},{"internalType":"address","name":"tokenB","type":"address"}],"name":"createPair","outputs":[{"internalType":"address","name":"pair","type":"address"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"feeTo","outputs":[{"internalType":"address","name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"feeToSetter","outputs":[{"internalType":"address","name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[{"internalType":"address","name":"","type":"address"},{"internalType":"address","name":"","type":"address"}],"name":"getPair","outputs":[{"internalType":"address","name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"internalType":"address","name":"_feeTo","type":"address"}],"name":"setFeeTo","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"internalType":"address","name":"_feeToSetter","type":"address"}],"name":"setFeeToSetter","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"}]')
@@ -138,24 +110,24 @@ def Buy(tokenAddress, tokenSymbol):
         if(tokenAddress != None):
             tokenToBuy = web3.toChecksumAddress(tokenAddress)
             spend = web3.toChecksumAddress("0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c")  #wbnb contract address
-            contract = web3.eth.contract(address=pancakeSwapRouterAddress, abi=pancakeABI)
-            nonce = web3.eth.get_transaction_count(walletAddress)
+            contract = web3.eth.contract(address=config.pancakeSwapRouterAddress, abi=pancakeABI)
+            nonce = web3.eth.get_transaction_count(config.walletAddress)
             start = time.time()
             pancakeswap2_txn = contract.functions.swapExactETHForTokens(
             0, # Set to 0 or specify min number of tokens - setting to 0 just buys X amount of tokens for whatever BNB specified
             [spend,tokenToBuy],
-            walletAddress,
-            (int(time.time()) + transactionRevertTime)
+            config.walletAddress,
+            (int(time.time()) + config.transactionRevertTime)
             ).buildTransaction({
-            'from': walletAddress,
-            'value': web3.toWei(float(snipeBNBAmount), 'ether'), #This is the Token(BNB) amount you want to Swap from
-            'gas': gasAmount,
-            'gasPrice': web3.toWei(gasPrice,'gwei'),
+            'from': config.walletAddress,
+            'value': web3.toWei(float(config.snipeBNBAmount), 'ether'), #This is the Token(BNB) amount you want to Swap from
+            'gas': config.gasAmount,
+            'gasPrice': web3.toWei(config.gasPrice,'gwei'),
             'nonce': nonce,
             })
 
             try:
-                signed_txn = web3.eth.account.sign_transaction(pancakeswap2_txn, walletPrivateKey)
+                signed_txn = web3.eth.account.sign_transaction(pancakeswap2_txn, config.walletPrivateKey)
                 tx_token = web3.eth.send_raw_transaction(signed_txn.rawTransaction) #BUY THE TOKEN
             except:
                 print(style.RED + currentTimeStamp + " Transaction failed.")
@@ -166,14 +138,14 @@ def Buy(tokenAddress, tokenSymbol):
 
         #TOKEN IS BOUGHT
 
-            checkTransactionSuccessURL = "https://api.bscscan.com/api?module=transaction&action=gettxreceiptstatus&txhash=" + txHash + "&apikey=" + bscScanAPIKey
+            checkTransactionSuccessURL = "https://api.bscscan.com/api?module=transaction&action=gettxreceiptstatus&txhash=" + txHash + "&apikey=" + config.bscScanAPIKey
             checkTransactionRequest = requests.get(url = checkTransactionSuccessURL)
             txResult = checkTransactionRequest.json()['status']
 
 
             if(txResult == "1"):
-                print(style.GREEN + currentTimeStamp + " [BUY] Successfully bought $" + tokenSymbol + " for " + style.BLUE + str(snipeBNBAmount) + style.GREEN + " BNB - TX ID: ", txHash)
-
+                print(style.GREEN + currentTimeStamp + " [BUY] Successfully bought $" + tokenSymbol + " for " + style.BLUE + str(config.snipeBNBAmount) + style.GREEN + " BNB - TX ID: ", txHash)
+                logging.info("{a}  [BUY] Successfully bought ${b} and address is {c}".format(a=currentTimeStamp, b=tokenSymbol, c=tokenAddress))
             else:
                 print(style.RED + currentTimeStamp + " [BUY] Transaction failed: likely not enough gas.")
 
@@ -191,20 +163,10 @@ buyTokenThread.start()
 #------------------------------------- LISTEN FOR TOKENS ON BINANCE SMART CHAIN THAT HAVE JUST ADDED LIQUIDITY ----------------------------------------------------------
 
 
-contract = web3.eth.contract(address=pancakeSwapFactoryAddress, abi=listeningABI)
+contract = web3.eth.contract(address=config.pancakeSwapFactoryAddress, abi=listeningABI)
 
 print(currentTimeStamp + " [Info] Scanning for new tokens...")
 print("") #line break
-
-def isWhiteList(token):
-    with open('whitelist.json', 'r') as configdata:
-        data=configdata.read()
-    whiteList = json.loads(data)
-    if 'list' in whiteList:
-        for sub_token in whiteList['list']:
-            if token == sub_token:
-                return True
-    return False
 
 def getReserves(pairAddressforReserves): #fundamental code for liquidity detection
   #  print("4")
@@ -219,9 +181,9 @@ def foundToken(event):
     bnbPairIndex = None
     try:
         jsonEventContents = json.loads(Web3.toJSON(event))
-        if(jsonEventContents['args']['token0'] == liquidityPairAddress or jsonEventContents['args']['token1'] == liquidityPairAddress): #check if pair is WBNB, if not then ignore it
+        if(jsonEventContents['args']['token0'] == config.liquidityPairAddress or jsonEventContents['args']['token1'] == config.liquidityPairAddress): #check if pair is WBNB, if not then ignore it
             
-            if jsonEventContents['args']['token1'] == liquidityPairAddress:
+            if jsonEventContents['args']['token1'] == config.liquidityPairAddress:
                 tokenAddress = jsonEventContents['args']['token0']
                 bnbPairIndex = 1
             else:
@@ -254,7 +216,7 @@ def foundToken(event):
 
             if(enableMiniAudit == True): #enable mini audit feature: quickly scans token for potential features that make it a scam / honeypot / rugpull etc
                 print(style.YELLOW + currentTimeStamp + " [Token] Starting Mini Audit...\n")
-                contractCodeGetRequestURL = "https://api.bscscan.com/api?module=contract&action=getsourcecode&address=" + tokenAddress + "&apikey=" + bscScanAPIKey
+                contractCodeGetRequestURL = "https://api.bscscan.com/api?module=contract&action=getsourcecode&address=" + tokenAddress + "&apikey=" + config.bscScanAPIKey
                 contractCodeRequest = requests.get(url = contractCodeGetRequestURL)
                 tokenContractCode = contractCodeRequest.json()
 
@@ -262,69 +224,79 @@ def foundToken(event):
 
                 # outcome = "";
 
-                if ( False == isWhiteList(tokenAddress) and checkForWhiteList == "True"): # check white list
+                # print(tokenLiquidityAmount < float(config.minLiquidityAmount))
+
+                if (tokenLiquidityAmount < float(config.minLiquidityAmount)):
+                    print(style.RED + "[FAIL] Liquidity amount too low.")
+                    boolLid = False
+                else:
+                    boolLid = True
+
+                if (boolLid): print(style.GREEN + "[SUCCESS] Liquidity.")
+
+
+                if ( False == BSCT_Util.isWhiteList(tokenAddress) and config.checkForWhiteList == "True"): # check white list
                     print(style.RED + currentTimeStamp + " [FAIL] Contract addree isn't in white list.")
                     boolWhiteList = False
                 else:
                     print(style.GREEN + "[SUCCESS] Contract address in white list.")
                     boolWhiteList = True
                 
-                if(str(tokenContractCode['result'][0]['ABI']) == "Contract source code not verified") and checkSourceCode == "True": #check if source code is verified
+                if(str(tokenContractCode['result'][0]['ABI']) == "Contract source code not verified") and config.checkSourceCode == "True": #check if source code is verified
                     print(style.RED + currentTimeStamp + " [FAIL] Contract source code isn't verified.")
                     boolSCV = False
                 else:
                     print(style.GREEN + "[SUCCESS] Contract source code verified.")
                     boolSCV = True
 
-                if (str(pancakeSwapRouterAddress) not in str(tokenContractCode['result'][0]['SourceCode'])) and checkValidPancakeV2 == "True": #check if pancakeswap v2 router is used
+                if (str(config.pancakeSwapRouterAddress) not in str(tokenContractCode['result'][0]['SourceCode'])) and config.checkValidPancakeV2 == "True": #check if pancakeswap v2 router is used
                     print(style.RED + currentTimeStamp + " [FAIL] Contract doesn't use valid PancakeSwap v2 router.")
                     boolPSV2 = False
                 else:
                     print(style.GREEN + "[SUCCESS] Contract use valid PancakeSwap v2 router.")
                     boolPSV2 = True
 
-                if "TEST" in tokenName.upper() and checkForTest == "True":
+                if "TEST" in tokenName.upper() and config.checkForTest == "True":
                     print(style.RED + currentTimeStamp + " [FAIL] Token is a test.")
                     boolTest = False
                 else:
                     print(style.GREEN + "[SUCCESS] Token is not test.")
                     boolTest = True
                     
-                if tokenLiquidityAmount < minLiquidityAmount:
-                    print(style.RED + "[FAIL] Liquidity amount too low.")
-                    boolLid = False
-                else:
-                    print(style.GREEN + "[SUCCESS] Liquidity is " + tokenLiquidityAmount)
-                    boolLid = True
+                
 
                 print("\n")
                 
                 if (boolWhiteList and boolSCV and boolPSV2 and boolLid and boolTest):
+                    # print("try purchase.")
                     passedCodeExceptionCheck = True
-                    codeExceptionFile = open("code_exceptions.txt")
-                    lines = codeExceptionFile.readlines()
-                    for codeException in lines:
-                        if codeException in tokenContractCode['result'][0]['sourceCode']:
-                            print("*" + codeException + "* FAIL")
-                            passedCodeExceptionCheck = False
+                    # codeExceptionFile = open("code_exceptions.txt")
+                    # lines = codeExceptionFile.readlines()
+                    # for codeException in lines:
+                    #     if codeException in tokenContractCode['result'][0]['sourceCode']:
+                    #         print("*" + codeException + "* FAIL")
+                    #         passedCodeExceptionCheck = False
 
                             
-                    if passedCodeExceptionCheck == False:
-                        print(style.RED + "[FAIL] Contract uses forbidden contract code from blacklist.")
+                    # if passedCodeExceptionCheck == False:
+                    #     print(style.RED + "[FAIL] Contract uses forbidden contract code from blacklist.")
                         
 
                     print(style.GREEN + currentTimeStamp + " [SUCCESS] Token has passed mini audit.") #now you can buy
                     numTokensBought = numTokensBought + 1
-                    if(observeOnly == "False" and passedCodeExceptionCheck == True):
+                    if(config.observeOnly == "False" and passedCodeExceptionCheck == True):
                         Buy(tokenAddress, tokenSymbol)
                         updateTitle()
-                    
+                    else:
+                        print(style.RED + "[FAIL] Check exception fail.")
+                else:
+                    print(style.RED + " [basic check fail] wl "+boolWhiteList+" SCV "+boolSCV+" V2 "+boolPSV2+" Lid "+boolLid+" Test "+boolTest)
                     
 
               
 
             else: #we dont care about audit, just buy it
-                if(observeOnly == "False"):
+                if(config.observeOnly == "False"):
                     Buy(tokenAddress, tokenSymbol)
                     numTokensBought += 1
                     updateTitle()
