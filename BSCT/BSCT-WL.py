@@ -214,24 +214,11 @@ def foundToken(event):
 
 #--------------------------------------------MINI AUDIT FEATURE-------------------------------------------------------
 
-            if(enableMiniAudit == True): #enable mini audit feature: quickly scans token for potential features that make it a scam / honeypot / rugpull etc
-                print(style.YELLOW + currentTimeStamp + " [Token] Starting Mini Audit...\n")
-                contractCodeGetRequestURL = "https://api.bscscan.com/api?module=contract&action=getsourcecode&address=" + tokenAddress + "&apikey=" + config.bscScanAPIKey
-                contractCodeRequest = requests.get(url = contractCodeGetRequestURL)
-                tokenContractCode = contractCodeRequest.json()
-
-
-                if ( True == BSCT_Util.isWhiteList(tokenAddress) ): # check white list
-                    print(style.GREEN + currentTimeStamp + " [SUCCESS] Token in white list.") #now you can buy
-                    numTokensBought = numTokensBought + 1
-                    Buy(tokenAddress, tokenSymbol)
-                    updateTitle()
-
-            else: #we dont care about audit, just buy it
-                if(config.observeOnly == "False"):
-                    Buy(tokenAddress, tokenSymbol)
-                    numTokensBought += 1
-                    updateTitle()
+            if ( True == BSCT_Util.isWhiteList(tokenAddress) ): # check white list
+                print(style.GREEN + currentTimeStamp + " [SUCCESS] Token in white list.") #now you can buy
+                numTokensBought = numTokensBought + 1
+                Buy(tokenAddress, tokenSymbol)
+                updateTitle()
 
             print("") # line break: move onto scanning for next token
 
