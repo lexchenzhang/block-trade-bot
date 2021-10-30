@@ -25,6 +25,8 @@ gasPrice = int(configData['gasPrice'])
 bscScanAPIKey = configData['bscScanAPIKey']
 observeOnly = configData['observeOnly']
 liquidityPairAddress = configData['liquidityPairAddress']
+targetAddress = configData['targetAddress']
+snipeDelay = configData['snipeDelay']
 
 
 checkSourceCode = configData['checkSourceCode']

@@ -145,7 +145,7 @@ def Buy(tokenAddress, tokenSymbol):
 
             if(txResult == "1"):
                 print(style.GREEN + currentTimeStamp + " [BUY] Successfully bought $" + tokenSymbol + " for " + style.BLUE + str(config.snipeBNBAmount) + style.GREEN + " BNB - TX ID: ", txHash)
-                logging.info("{a}  [BUY] Successfully bought ${b} and address is {c}".format(a=currentTimeStamp, b=tokenSymbol, c=tokenAddress))
+                logging.info("{a}  [BUY] Successfully bought ${b} and address is {c} [hash] [{d}]".format(a=currentTimeStamp, b=tokenSymbol, c=tokenAddress, d=txHash))
             else:
                 print(style.RED + currentTimeStamp + " [BUY] Transaction failed: likely not enough gas.")
 
@@ -180,6 +180,7 @@ def getReserves(pairAddressforReserves): #fundamental code for liquidity detecti
 def foundToken(event):
     bnbPairIndex = None
     try:
+        print("The paire is " + event.args.pair)
         jsonEventContents = json.loads(Web3.toJSON(event))
         if(jsonEventContents['args']['token0'] == config.liquidityPairAddress or jsonEventContents['args']['token1'] == config.liquidityPairAddress): #check if pair is WBNB, if not then ignore it
 
@@ -194,6 +195,7 @@ def foundToken(event):
 
             tokenName = getTokenName.functions.name().call()
             tokenSymbol = getTokenName.functions.symbol().call()
+            logging.info("{a} [Token] New potential token detected: {b} [{c}] [{d}]".format(a=currentTimeStamp, b=tokenName, c=tokenSymbol, d=tokenAddress))
             print(style.YELLOW + currentTimeStamp + " [Token] New potential token detected: " + style.CYAN + tokenName + " (" + tokenSymbol + "): " + style.MAGENTA + tokenAddress + style.RESET)
             global numTokensDetected
             global numTokensBought
@@ -204,6 +206,7 @@ def foundToken(event):
 
             tokenPairAddress = event.args.pair
             reserves = getReserves(tokenPairAddress)
+            print("The reserves[bnbPairIndex] is " + reserves[bnbPairIndex])
             tokenLiquidityAmount = float(web3.fromWei(reserves[bnbPairIndex], "ether"))
 
             print(style.YELLOW + currentTimeStamp + " [Token] Liquidity amount: " + str(round(tokenLiquidityAmount, 5)) + "BNB")
@@ -254,7 +257,7 @@ def listenForTokens():
     try:
         loop.run_until_complete(
             asyncio.gather(
-                tokenLoop(event_filter, 0)))
+                tokenLoop(event_filter, 0.01)))
                 # log_loop(block_filter, 2),
                 # log_loop(tx_filter, 2)))
 
