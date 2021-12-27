@@ -163,7 +163,7 @@ buyTokenThread.start()
 #------------------------------------- LISTEN FOR TOKENS ON BINANCE SMART CHAIN THAT HAVE JUST ADDED LIQUIDITY ----------------------------------------------------------
 
 
-contract = web3.eth.contract(address=config.pancakeSwapFactoryAddress, abi=listeningABI)
+
 
 print(currentTimeStamp + " [Info] Scanning for new tokens...")
 print("") #line break
@@ -250,6 +250,7 @@ async def tokenLoop(event_filter, poll_interval):
 
 
 def listenForTokens():
+    contract = web3.eth.contract(address=config.pancakeSwapFactoryAddress, abi=listeningABI)
     event_filter = contract.events.PairCreated.createFilter(fromBlock='latest')
     #block_filter = web3.eth.filter('latest')
     # tx_filter = web3.eth.filter('pending')
